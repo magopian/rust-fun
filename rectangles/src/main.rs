@@ -57,3 +57,34 @@ fn main() {
         rect1.can_hold(&rect2)
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn larger_can_hold_smaller() {
+        let larger = Rectangle {
+            width: 10,
+            height: 10,
+        };
+        let smaller = Rectangle {
+            width: 2,
+            height: 2,
+        };
+        assert!(larger.can_hold(&smaller));
+    }
+
+    #[test]
+    fn smaller_cant_hold_larger() {
+        let larger = Rectangle {
+            width: 10,
+            height: 10,
+        };
+        let smaller = Rectangle {
+            width: 2,
+            height: 2,
+        };
+        assert!(!smaller.can_hold(&larger));
+    }
+}
