@@ -5,6 +5,19 @@
 /// Useful types:
 /// - `std::net::TcpListener` (and the `incoming()`)
 /// - `std::collection::Vec` or `std::collections::VecDeque`
+///
+/// Expanding on it:
+/// - make what you can constants
+/// - Add tests
+/// - use multile modules (multiple files preferably to lean import semantics better)
+/// - use an enum type for messages
+/// - make it threaded
+/// - multiple (named) channels (hashmap)
+/// - remove all `unwrap` calls
+/// - use the `?` operator with your own error type (enum is fine for now)
+/// - use `&'a str` for your message parsing function (or: get rid of `String::from` where
+/// possible)
+/// - try deserializing and serializing with a library (serde_json)
 
 extern crate bufstream;
 
