@@ -68,7 +68,11 @@ impl Redisish {
                 }
             } else {
                 println!("Neither GETing nor PUTing...");
-                stream.write(String::from("ACK\n").as_bytes())?;
+                stream.write(
+                    String::from(
+                        "Couldn't recognize command, please use `GET` or `PUT <string>`\n",
+                    ).as_bytes(),
+                )?;
             }
             stream.flush()?;
 
