@@ -26,6 +26,29 @@ use std::io::{BufRead, Write};
 use std::collections::VecDeque;
 use bufstream::BufStream;
 
+enum Command {
+    GET,
+    PUT(String),
+    INVALID,
+}
+
+impl Command {
+    fn parse(command: &str) -> Self {
+        if command == "GET\n" {
+            Command::GET
+        } else if command.starts_with("PUT ") {
+            let (_, data) = command.trim().split_at(4);
+            if data.len() != 0 {
+                Command::PUT(data.into())
+            } else {
+                Command::INVALID
+            }
+        } else {
+            Command::INVALID
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Redisish {
     messages: VecDeque<String>,
@@ -50,29 +73,21 @@ impl Redisish {
                 Err(e) => return Err(e),
             };
 
-            if content == String::from("GET\n") {
-                self.get(&mut stream)?;
-            } else if content.starts_with("PUT ") {
-                let (_, data) = content.trim().split_at(4);
-                if data.len() != 0 {
+            match Command::parse(&content) {
+                Command::GET => self.get(&mut stream)?,
+                Command::PUT(data) => {
                     println!("Putting: {}", data);
                     self.messages.push_front(data.into());
                     stream.write(String::from("ACK\n").as_bytes())?;
-                } else {
-                    println!("Malformed PUT");
+                }
+                Command::INVALID => {
+                    println!("Neither GETing nor PUTing...");
                     stream.write(
                         String::from(
-                            "Malformed PUT, expecting 'PUT <some string>'\n",
+                            "Couldn't recognize command, please use `GET` or `PUT <string>`\n",
                         ).as_bytes(),
                     )?;
                 }
-            } else {
-                println!("Neither GETing nor PUTing...");
-                stream.write(
-                    String::from(
-                        "Couldn't recognize command, please use `GET` or `PUT <string>`\n",
-                    ).as_bytes(),
-                )?;
             }
             stream.flush()?;
 
