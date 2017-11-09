@@ -5,7 +5,7 @@ use std::io::{BufRead, Write, stdin};
 use bufstream::BufStream;
 
 fn main() {
-    let mut stream = TcpStream::connect("127.0.0.1:8000").unwrap();
+    let stream = TcpStream::connect("127.0.0.1:8000").unwrap();
     let mut stream = BufStream::new(stream);
 
     loop {
@@ -21,6 +21,6 @@ fn main() {
 
         let mut response = String::new();
         stream.read_line(&mut response);
-        println!("Response: {:?}", response);
+        println!("Response: {:?}", response.trim());
     }
 }
