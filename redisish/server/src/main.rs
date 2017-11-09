@@ -53,10 +53,10 @@ impl Redisish {
             if content == String::from("GET\n") {
                 self.get(&mut stream)?;
             } else if content.starts_with("PUT ") {
-                let splitted: Vec<&str> = content.trim().split(" ").collect();
-                if splitted.len() >= 2 {
-                    println!("Putting: {}", splitted[1]);
-                    self.messages.push_front(splitted[1].to_string());
+                let (_, data) = content.trim().split_at(4);
+                if data.len() != 0 {
+                    println!("Putting: {}", data);
+                    self.messages.push_front(data.into());
                     stream.write(String::from("ACK\n").as_bytes())?;
                 } else {
                     println!("Malformed PUT");
