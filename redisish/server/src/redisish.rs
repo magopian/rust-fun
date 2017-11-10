@@ -3,6 +3,7 @@ use std::io::{BufRead, Error, Write};
 use std::collections::VecDeque;
 use bufstream::BufStream;
 
+#[derive(Debug, PartialEq)]
 enum Command {
     GET,
     PUT(String),
@@ -11,14 +12,15 @@ enum Command {
 
 impl Command {
     fn parse(command: &str) -> Self {
-        if command == "GET\n" {
+        let command = command.trim();
+        if command == "GET" {
             Command::GET
         } else if command.starts_with("PUT ") {
-            let (_, data) = command.trim().split_at(4);
-            if data.len() != 0 {
-                Command::PUT(data.into())
-            } else {
+            if command.len() < 4 {
                 Command::INVALID
+            } else {
+                let (_, data) = command.trim().split_at(4);
+                Command::PUT(data.into())
             }
         } else {
             Command::INVALID
@@ -89,5 +91,33 @@ impl Redisish {
         }
         stream.write(String::from("\n").as_bytes())?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_command_parse_get() {
+        assert_eq!(Command::parse("GET\n"), Command::GET);
+    }
+
+    #[test]
+    fn test_command_parse_put() {
+        assert_eq!(
+            Command::parse("PUT foo bar\n"),
+            Command::PUT("foo bar".into())
+        );
+    }
+
+    #[test]
+    fn test_command_parse_put_invalid() {
+        assert_eq!(Command::parse("PUT "), Command::INVALID);
+    }
+
+    #[test]
+    fn test_command_parse_invalid() {
+        assert_eq!(Command::parse("foo"), Command::INVALID);
     }
 }

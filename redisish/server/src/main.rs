@@ -45,8 +45,3 @@ fn main() {
         }
     }
 }
-
-#[test]
-fn put() {
-    assert!(false);
-}
