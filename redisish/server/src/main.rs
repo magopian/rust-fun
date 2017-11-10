@@ -24,7 +24,9 @@ mod redisish;
 
 use std::net::{TcpListener};
 use std::collections::VecDeque;
-use redisish::Redisish;
+use std::thread;
+use std::sync::mpsc::{Receiver, Sender, channel};
+use redisish::{Command, Message, Redisish, handle_client};
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8000").expect("Couldn't open listening socket");
@@ -34,12 +36,40 @@ fn main() {
     let mut redisish = Redisish::new(messages);
     println!("Started the redis server");
 
+    let (tx, rx): (Sender<Message>, Receiver<Message>) = channel();
+    // Spawning the receiver (handles the "database")
+    thread::spawn(move || {
+        loop {
+            let mut message = rx.recv().unwrap();
+            println!("Message received: {:?}", message.command);
+            match message.command {
+                Command::INVALID =>  {
+                    println!("Neither GETing nor PUTing...");
+                    (message.callback)("Command invalid".into());
+                },
+                Command::GET => {
+                    let data = redisish.get();
+                    (message.callback)(data);
+                },
+                Command::PUT(data) => {
+                    println!("Putting: {}", data);
+                    redisish.messages.push_front(data.into());
+                    (message.callback)("ACK".into());
+                    println!("New queue length: {}", redisish.messages.len());
+                }
+            };
+        }
+    });
+
     // accept connections and process them serially
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
                 println!("New client");
-                redisish.handle_client(stream).expect("IO error");
+                let tx = tx.clone();
+                thread::spawn(move || {
+                    handle_client(tx, stream).expect("IO error");
+                });
             }
             Err(e) => println!("Error: {:?}", e),
         }
