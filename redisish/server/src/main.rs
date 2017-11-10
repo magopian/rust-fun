@@ -40,7 +40,7 @@ fn main() {
     // Spawning the receiver (handles the "database")
     thread::spawn(move || {
         loop {
-            let mut message = rx.recv().unwrap();
+            let mut message = rx.recv().expect("Couldn't receive from channel");
             println!("Message received: {:?}", message.command);
             match message.command {
                 Command::INVALID =>  {

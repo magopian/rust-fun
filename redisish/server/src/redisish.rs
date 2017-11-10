@@ -59,7 +59,7 @@ impl Redisish {
 }
 
 pub fn handle_client(chan: Sender<Message>, stream: TcpStream) -> Result<(), Error> {
-    let backup_stream = stream.try_clone().unwrap();
+    let backup_stream = stream.try_clone().expect("Couldn't clone stream");
     let mut buffered = BufStream::new(stream);
 
     loop {
@@ -78,16 +78,16 @@ pub fn handle_client(chan: Sender<Message>, stream: TcpStream) -> Result<(), Err
         };
 
         let command = Command::parse(&content);
-        let cloned_stream = backup_stream.try_clone().unwrap();
+        let cloned_stream = backup_stream.try_clone().expect("Couldn't clone stream");
         let mut cloned_buffered = BufStream::new(cloned_stream);
         chan.send(Message {
             command: command,
             callback: Box::new(move |response| {
                 write!(cloned_buffered, "{}\n", response)
                     .and_then(|_| cloned_buffered.flush())
-                    .unwrap();
+                    .expect("Couldn't write message");
             }),
-        }).unwrap();
+        }).expect("Couldn't send message to channel");
     }
 }
 
