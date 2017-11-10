@@ -40,28 +40,28 @@ fn main() {
     // Spawning the receiver (handles the "database")
     thread::spawn(move || {
         loop {
-            let mut message = rx.recv().expect("Couldn't receive from channel");
+            let message = rx.recv().expect("Couldn't receive from channel");
             println!("Message received: {:?}", message.command);
             match message.command {
                 Command::INVALID =>  {
                     println!("Neither GETing nor PUTing...");
-                    (message.callback)("Command invalid".into());
+                    message.answer.send("Command invalid".into()).expect("Couldn't write answer to channel");
                 },
                 Command::GET => {
                     let data = redisish.get();
-                    (message.callback)(data);
+                    message.answer.send(data).expect("Couldn't write answer to channel");
                 },
                 Command::PUT(data) => {
                     println!("Putting: {}", data);
                     redisish.messages.push_front(data.into());
-                    (message.callback)("ACK".into());
+                    message.answer.send("ACK".into()).expect("Couldn't write answer to channel");
                     println!("New queue length: {}", redisish.messages.len());
                 }
             };
         }
     });
 
-    // accept connections and process them serially
+    // accept connections and process them in separate threads
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {

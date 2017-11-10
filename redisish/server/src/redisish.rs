@@ -1,12 +1,12 @@
 use std::net::TcpStream;
 use std::io::{BufRead, Error, Write};
 use std::collections::VecDeque;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Receiver, Sender, channel};
 use bufstream::BufStream;
 
 pub struct Message {
     pub command: Command,
-    pub callback: Box<FnMut(String) + Send>,
+    pub answer: Sender<String>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -59,7 +59,6 @@ impl Redisish {
 }
 
 pub fn handle_client(chan: Sender<Message>, stream: TcpStream) -> Result<(), Error> {
-    let backup_stream = stream.try_clone().expect("Couldn't clone stream");
     let mut buffered = BufStream::new(stream);
 
     loop {
@@ -78,16 +77,15 @@ pub fn handle_client(chan: Sender<Message>, stream: TcpStream) -> Result<(), Err
         };
 
         let command = Command::parse(&content);
-        let cloned_stream = backup_stream.try_clone().expect("Couldn't clone stream");
-        let mut cloned_buffered = BufStream::new(cloned_stream);
+        let (tx, rx): (Sender<String>, Receiver<String>) = channel();
         chan.send(Message {
             command: command,
-            callback: Box::new(move |response| {
-                write!(cloned_buffered, "{}\n", response)
-                    .and_then(|_| cloned_buffered.flush())
-                    .expect("Couldn't write message");
-            }),
+            answer: tx,
         }).expect("Couldn't send message to channel");
+        let response = rx.recv().expect("Couldn't read response from channel");
+        write!(buffered, "{}\n", response).and_then(
+            |_| buffered.flush(),
+        )?;
     }
 }
 
